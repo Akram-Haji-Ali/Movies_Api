@@ -1,6 +1,7 @@
 const express = require("express"),
 morgan = require("morgan");
 const app = express();
+const bodyParser = require('body-parser');
 
 let topTenMovies = [
   {
@@ -47,6 +48,7 @@ let topTenMovies = [
 
 app.use(express.static("public"));
 app.use(morgan("common"));
+app.use(bodyParser.json())
 
 // GET requests
 app.get("/", (req, res) => {
