@@ -4,6 +4,10 @@ uuid = require('uuid'),
 morgan = require('morgan'),
 fs = require('fs'),
 path = require('path');
+require('dotenv').config()
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
+
 
 const app = express();
 const mongoose = require('mongoose');
@@ -24,7 +28,7 @@ const Directors = Models.Director;
 
 //// This allows mongoose connect to the online database 
 
-mongoose.connect( process.env.CONNECTION_URI, { useNewUrlParser: true, useUnifiedTopology: true});
+mongoose.connect( process.env.CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true});
 
 
 app.use(bodyParser.json());
@@ -52,7 +56,7 @@ app.get('/', (req, res) => {
 });
 
 // get all movies and return json object
-app.get('/movies', passport.authenticate('jwt', { session: false }), (req, res) => {
+app.get('/movies', (req, res) => {
   Movies.find()
   .then((movies) => {
     res.status(200).json(movies);
@@ -64,7 +68,7 @@ app.get('/movies', passport.authenticate('jwt', { session: false }), (req, res) 
 });
 
 // get movies by title
-app.get('/movies/:title', passport.authenticate('jwt', { session: false }), (req, res) => {
+app.get('/movies/:title', (req, res) => {
   Movies.findOne({ Title: req.params.title})
   .then((movie) => {
     res.status(200).json(movie);
@@ -76,7 +80,7 @@ app.get('/movies/:title', passport.authenticate('jwt', { session: false }), (req
 });
 
 //Get genre by Name
-app.get('/movies/genres/:Name', passport.authenticate('jwt', { session: false }), (req, res) => {
+app.get('/movies/genres/:Name', (req, res) => {
   Movies.findOne({ "Genre.Name": req.params.Name})
   .then((movies) => {
     res.send(movies.Genre);
@@ -88,7 +92,7 @@ app.get('/movies/genres/:Name', passport.authenticate('jwt', { session: false })
 });
 
 //Get director data by Name
-app.get('/movies/directors/:Name', passport.authenticate('jwt', { session: false }), (req, res) => {
+app.get('/movies/directors/:Name', (req, res) => {
   Movies.findOne({"Director.Name": req.params.Name})
   .then((movies) => {
     res.send(movies.Director);
@@ -123,46 +127,48 @@ app.get('/users/:Name', passport.authenticate('jwt', { session: false }), (req, 
   })
 })
 
-// // Allow new users register (create)
-app.post('/users',
-[
-check('Name', 'Name is required').isLength({min: 5}),
-check('Name', 'Name contains non alphanumeric characters - not allowed.').isAlphanumeric(),
-check('Password', 'Password is required').not().isEmpty(),
-check('Email', 'Email does not appear to be valid').isEmail()
-],
-(req, res) => {
-
-    // check the validation object for errors
-    let errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(422).json({ errors: errors.array() });
+app.post('/users', [
+  check('Name', 'Name is required').isLength({ min: 5 }),
+  check('Name', 'Name contains non alphanumeric characters - not allowed.').isAlphanumeric(),
+  check('Password', 'Password is required').not().isEmpty(),
+  check('Email', 'Email does not appear to be valid').isEmail()
+], (req, res) => {
+  let errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+  bcrypt.hash(req.body.Password, saltRounds, (err, hashedPassword) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Error: ' + err);
     }
-  let hashedPassword = Users.hashPassword(req.body.Password);
-  Users.findOne({ Name: req.body.Name })
-  .then((user) => {
-    if (user) {
-      return res.status(400).send(req.body.Name + ' already exists');
-    } else {
-      Users
-      .create({
-        Name: req.body.Name,
-        Password: req.body.Password,
-        Email: req.body.Email,
-        Birthday: req.body.Birthday
+    Users.findOne({ Name: req.body.Name })
+      .then((user) => {
+        if (user) {
+          return res.status(400).send(req.body.Name + ' already exists');
+        } else {
+          Users.create({
+              Name: req.body.Name,
+              Password: hashedPassword, // Store hashed password
+              Email: req.body.Email,
+              Birthday: req.body.Birthday
+            })
+            .then((user) => {
+              res.status(201).json(user)
+            })
+            .catch((error) => {
+              console.error(error);
+              res.status(500).send('Error: ' + error);
+            })
+        }
       })
-      .then((user) =>{res.status(201).json(user) })
       .catch((error) => {
         console.error(error);
         res.status(500).send('Error: ' + error);
-      })
-    }
-  })
-  .catch((error) => {
-    console.error(error);
-    res.status(500).send('Error: ' + error);
+      });
   });
 });
+
 
 app.put(
   '/users/:Name',
