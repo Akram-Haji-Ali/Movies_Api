@@ -1,6 +1,7 @@
 const express = require('express');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const uuid = require('uuid');
 const passport = require('passport');
 const { check, validationResult } = require('express-validator'); // Import check and validationResult from express-validator library
@@ -12,12 +13,26 @@ const app = express();
 app.use(bodyParser.json());
 app.use(morgan('common'));
 app.use(express.static('public'));
+app.use(cors());
 
 const mongoose = require('mongoose');
 const Models = require('./models.js');
 
 const Movies = Models.Movie;
 const Users = Models.User;
+
+
+// Set allowed origins and handle CORS middleware
+const allowedOrigins = ['https://myflix-bjxg.onrender.com', 'http://localhost:8080']; // Add your allowed domains here
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
 
 
 // Connect to MongoDB database
