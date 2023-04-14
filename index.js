@@ -3,17 +3,23 @@ const morgan = require('morgan');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const uuid = require('uuid');
-const passport = require('passport');
 const { check, validationResult } = require('express-validator'); // Import check and validationResult from express-validator library
-require('./passport');
+
 const dotenv = require('dotenv');
 dotenv.config(); // Load environment variables from .env file
 
 const app = express();
+const passport = require('passport');
+require('./passport');
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
 app.use(morgan('common'));
 app.use(express.static('public'));
 app.use(cors());
+app.use(passport.initialize());
+
+let auth = require('./auth')(app); // (app) ensures, that Express is available in auth.js file as well
 
 const mongoose = require('mongoose');
 const Models = require('./models.js');
