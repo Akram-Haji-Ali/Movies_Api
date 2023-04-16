@@ -29,7 +29,12 @@ const Users = Models.User;
 
 
 // Set allowed origins and handle CORS middleware
-const allowedOrigins = ['https://myflix-bjxg.onrender.com', 'http://localhost:8080']; // Add your allowed domains here
+const allowedOrigins = [
+  'https://myflix-bjxg.onrender.com',
+'https://myflix4movies.netlify.app',
+'http://localhost:1234',
+   'http://localhost:8080',
+  ]; 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
